@@ -15,7 +15,7 @@ dependencies
 ```python
 from mothrpy import JobRequest
 
-request = JobRequest(service='echo', url='https://mothr.rs21.io/api')
+request = JobRequest(service='echo')
 request.add_parameter(value='Hello Mothr!')
 result = request.run_job()
 print(result)
