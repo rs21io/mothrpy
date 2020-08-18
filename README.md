@@ -16,7 +16,7 @@ dependencies
 from mothrpy import JobRequest
 
 request = JobRequest(service='echo')
-request.add_parameter(value='Hello Mothr!')
+request.add_parameter(value='Hello MOTHR!')
 result = request.run_job()
 print(result)
 ```
