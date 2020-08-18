@@ -1,7 +1,6 @@
 # mothrpy
 
-[![pipeline status](http://gitlab.rs21.io/mothr/client-libraries/mothrpy/badges/master/pipeline.svg)](http://gitlab.rs21.io/mothr/client-libraries/mothrpy/commits/master)
-[![coverage report](http://gitlab.rs21.io/mothr/client-libraries/mothrpy/badges/master/coverage.svg)](http://gitlab.rs21.io/mothr/client-libraries/mothrpy/commits/master)
+![GitHub](https://img.shields.io/github/license/rs21io/mothrpy)
 
 ## Installation
 `pip install mothrpy`
