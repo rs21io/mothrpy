@@ -10,7 +10,7 @@ setuptools.setup(
     include_package_data=True,
     install_requires=["gql==3.0.0a1", "redis"],
     extras_require={
-        "dev": ["mock", "pytest", "pytest-cov", "pytest-mypy"],
+        "dev": ["mock", "pytest", "pytest-cov", "pytest-mypy", "pytest-pylint"],
         "listener": ["gevent"],
     },
     classifiers=[
