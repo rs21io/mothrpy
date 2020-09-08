@@ -4,17 +4,18 @@
 
 import gc
 import os
+from typing import Dict, Iterator, List, Union
+
 import redis
-from argparse import ArgumentParser
-from typing import Dict, Iterator, List, Optional, Union
 
 try:
     import gevent
+
     USE_THREADING = True
 except ImportError:
     USE_THREADING = False
 
-REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
 
 
 class Listener:
@@ -29,13 +30,14 @@ class Listener:
             wildcard (e.g., channel:*) which will listen to all channels that start
             with "channel:".
     """
+
     def __init__(self, channels: List[str]) -> None:
         db = redis.StrictRedis(REDIS_HOST, decode_responses=True)
         pubsub = db.pubsub()
         if isinstance(channels, str):
             channels = [channels]
-        subs = [channel for channel in channels if not channel.endswith('*')]
-        pattern_subs = [channel for channel in channels if channel.endswith('*')]
+        subs = [channel for channel in channels if not channel.endswith("*")]
+        pattern_subs = [channel for channel in channels if channel.endswith("*")]
         if len(subs) > 0:
             pubsub.subscribe(*subs)
         if len(pattern_subs) > 0:
@@ -46,7 +48,7 @@ class Listener:
     def _iter_data(self) -> Iterator[Dict[str, Union[None, str]]]:
         """Yield published messages received on subscribed channels"""
         for message in self.pubsub.listen():
-            if message['type'] in ['message', 'pmessage']:
+            if message["type"] in ["message", "pmessage"]:
                 yield message
 
     def handle_message(self, channel, message):
@@ -56,33 +58,42 @@ class Listener:
             channel (str): Name of the channel on which the message was received
             message (str): The message received on the channel
         """
-        raise NotImplementedError('You must override handle_message to use this class')
+        raise NotImplementedError("You must override handle_message to use this class")
 
     def run(self) -> None:
         """Listen for messages on subscribed channels"""
         for message in self._iter_data():
             if USE_THREADING:
-                gevent.spawn(self.handle_message, message['channel'], message['data'])
+                gevent.spawn(self.handle_message, message["channel"], message["data"])
                 gevent.sleep(0)
             else:
-                self.handle_message(message['channel'], message['data'])
+                self.handle_message(message["channel"], message["data"])
 
     def start(self) -> None:
-        print('Starting listener')
+        """Start the listener"""
+        print("Starting listener")
         try:
             if not USE_THREADING:
-                print('''WARNING: gevent library is not installed, concurrency is disabled. \
+                print(
+                    '''WARNING: gevent library is not installed, \
+                            concurrency is disabled. \
                             Listener will block when handling messages and potentially \
                             miss events, enable concurrency by installing optional \
-                            dependencies with "pip install mothrpy[listener]"''')
+                            dependencies with "pip install mothrpy[listener]"'''
+                )
             self.run()
         except KeyboardInterrupt:
-            print('Stopping listener')
+            print("Stopping listener")
         except Exception as e:
             print(e)
         finally:
             if USE_THREADING:
-                gevent.killall([obj for obj in gc.get_objects()
-                                if isinstance(obj, gevent.Greenlet)])
+                gevent.killall(
+                    [
+                        obj
+                        for obj in gc.get_objects()
+                        if isinstance(obj, gevent.Greenlet)
+                    ]
+                )
             self.pubsub.unsubscribe()
             self.pubsub.punsubscribe()
