@@ -8,7 +8,7 @@ setuptools.setup(
     description="Client library for interacting with MOTHR",
     packages=setuptools.find_packages(),
     include_package_data=True,
-    install_requires=["gql==3.0.0a1", "redis"],
+    install_requires=["gql==3.0.0a3", "redis"],
     extras_require={
         "dev": ["mock", "pytest", "pytest-cov", "pytest-mypy", "pytest-pylint"],
         "listener": ["gevent"],
