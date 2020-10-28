@@ -45,7 +45,7 @@ class MothrClient:
     def __init__(self, **kwargs):
         schemes = {"http": "ws", "https": "wss"}
         self.headers: Dict[str, str] = {}
-        endpoint = os.environ.get(URL_VAR, "http://localhost:8080/query")
+        endpoint = os.getenv(URL_VAR, "http://localhost:8080/query")
         url = kwargs.pop("url", endpoint)
         split_url = urlsplit(url)
         ws_url = urlunsplit(split_url._replace(scheme=schemes[split_url.scheme]))
@@ -86,12 +86,8 @@ class MothrClient:
             ValueError: If a username or password are not provided and are not found
                 in the current environment
         """
-        username = (
-            username if username is not None else os.environ.get("MOTHR_USERNAME")
-        )
-        password = (
-            password if password is not None else os.environ.get("MOTHR_PASSWORD")
-        )
+        username = username if username is not None else os.getenv("MOTHR_USERNAME")
+        password = password if password is not None else os.getenv("MOTHR_PASSWORD")
         if username is None:
             raise ValueError("Username not provided")
         if password is None:
