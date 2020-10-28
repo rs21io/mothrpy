@@ -19,6 +19,12 @@ with open(
     schema = f.read()
 
 
+USERNAME_VAR = "MOTHR_USERNAME"
+PASSWORD_VAR = "MOTHR_PASSWORD"
+URL_VAR = "MOTHR_ENDPOINT"
+TOKEN_VAR = "MOTHR_ACCESS_TOKEN"
+
+
 class MothrClient:
     """Client for connecting to MOTHR
 
@@ -39,7 +45,7 @@ class MothrClient:
     def __init__(self, **kwargs):
         schemes = {"http": "ws", "https": "wss"}
         self.headers: Dict[str, str] = {}
-        endpoint = os.environ.get("MOTHR_ENDPOINT", "http://localhost:8080/query")
+        endpoint = os.environ.get(URL_VAR, "http://localhost:8080/query")
         url = kwargs.pop("url", endpoint)
         split_url = urlsplit(url)
         ws_url = urlunsplit(split_url._replace(scheme=schemes[split_url.scheme]))
@@ -51,16 +57,12 @@ class MothrClient:
         ws_transport = WebsocketsTransport(url=ws_url)
         self.ws_client = Client(transport=ws_transport, schema=schema)
 
-        self.token = kwargs.pop("token", os.environ.get("MOTHR_ACCESS_TOKEN"))
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
-        if username is None:
-            username = os.environ.get("MOTHR_USERNAME")
-        if password is None:
-            password = os.environ.get("MOTHR_PASSWORD")
+        self.token = kwargs.pop("token", os.getenv(TOKEN_VAR))
+        username = kwargs.pop("username", os.getenv(USERNAME_VAR))
+        password = kwargs.pop("password", os.getenv(PASSWORD_VAR))
         if self.token is not None:
             self.headers = {"Authorization": f"Bearer {self.token}"}
-        elif None not in (username, password):
+        elif all((username, password)):
             self.token, self.refresh = self.login(username, password)
             self.headers = {"Authorization": f"Bearer {self.token}"}
 
