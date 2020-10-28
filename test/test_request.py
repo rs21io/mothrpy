@@ -1,6 +1,6 @@
 import mock
 import pytest
-from mothrpy import JobRequest
+from mothrpy import JobRequest, MothrClient
 
 class TestJobRequest:
     def setup_method(self, _):
@@ -74,7 +74,7 @@ class TestJobRequest:
     @mock.patch('gql.dsl.DSLSchema.mutate')
     def test_login(self, mock_mutate):
         mock_mutate.return_value = {'login':{'token':'access-token','refresh':'refresh-token'}}
-        request = JobRequest(service='test')
-        access, refresh =  request.login(username='test', password='password')
+        client = MothrClient()
+        access, refresh =  client.login(username='test', password='password')
         assert(access == 'access-token')
         assert(refresh == 'refresh-token')
