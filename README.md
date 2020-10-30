@@ -30,8 +30,16 @@ client connection when making multiple requests.
 from mothrpy import JobRequest, MothrClient
 
 client = MothrClient()
+
+# Send one request
 request = JobRequest(client=client, service='echo')
 request.add_parameter(value='Hello MOTHR!')
+result = request.run_job()
+print(result)
+
+# Reuse the client in another request
+request = JobRequest(client=client, service='echo')
+request.add_parameter(value='Hello again MOTHR!')
 result = request.run_job()
 print(result)
 ```
