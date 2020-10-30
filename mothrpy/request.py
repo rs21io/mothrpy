@@ -68,7 +68,7 @@ class MothrClient:
 
     def login(
         self, username: Optional[str] = None, password: Optional[str] = None
-    ) -> Tuple[str, Optional[str]]:
+    ) -> Tuple[str, str]:
         """Retrieve a web token from mothr
 
         Args:
