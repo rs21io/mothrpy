@@ -23,7 +23,7 @@ result = request.run_job()
 print(result)
 ```
 
-Submitting a job request Using `MothrClient`. This allows you to reuse the
+Submitting a job request using `MothrClient`. This allows you to reuse the
 client connection when making multiple requests.
 
 ```python
