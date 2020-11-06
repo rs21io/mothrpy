@@ -9,8 +9,10 @@ import time
 from urllib.parse import urlsplit, urlunsplit
 from typing import Dict, Iterator, List, Optional, Tuple
 
-from gql import gql, Client, RequestsHTTPTransport, WebsocketsTransport
+from gql import gql, Client
 from gql.dsl import DSLSchema
+from gql.transport.requests import RequestsHTTPTransport
+from gql.transport.websockets import WebsocketsTransport
 
 
 with open(

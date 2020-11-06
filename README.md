@@ -5,11 +5,6 @@
 ## Installation
 `pip install mothrpy`
 
-If you need to create a listener you need to install the optional listener
-dependencies
-
-`pip install mothrpy[listener]`
-
 ## Usage
 
 Basic example submitting a job request
