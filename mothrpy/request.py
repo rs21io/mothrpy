@@ -19,23 +19,16 @@ with open(
     schema = f.read()
 
 
-class JobRequest:
-    """Object used for submitting requests to mothr
+USERNAME_VAR = "MOTHR_USERNAME"
+PASSWORD_VAR = "MOTHR_PASSWORD"
+URL_VAR = "MOTHR_ENDPOINT"
+TOKEN_VAR = "MOTHR_ACCESS_TOKEN"
 
-    Attributes:
-        job_id (str): Request job id returned from self.submit()
-        status (str): Status of the job
+
+class MothrClient:
+    """Client for connecting to MOTHR
 
     Args:
-        service (str): Service being invoked by the request
-        parameters (list<dict>, optional): Parameters to pass to the service
-        broadcast (list<str>, optional): PubSub channel to broadcast the job result to
-        inputs (list<str>, optional): A list of S3 URIs to be used as
-            inputs by the service
-        outputs (list<str>, optional): A list of S3 URIs to be uploaded by the service
-        input_stream (str, optional): Value to pass to service through stdin
-        output_metadata (dict): Metadata attached to job outputs
-        version (str, optional): Version of the service, default `latest`
         url (str, optional): Endpoint to send the job request,
             checks for ``MOTHR_ENDPOINT`` in environment variables otherwise
             defaults to ``http://localhost:8080/query``
@@ -52,7 +45,7 @@ class JobRequest:
     def __init__(self, **kwargs):
         schemes = {"http": "ws", "https": "wss"}
         self.headers: Dict[str, str] = {}
-        endpoint = os.environ.get("MOTHR_ENDPOINT", "http://localhost:8080/query")
+        endpoint = os.getenv(URL_VAR, "http://localhost:8080/query")
         url = kwargs.pop("url", endpoint)
         split_url = urlsplit(url)
         ws_url = urlunsplit(split_url._replace(scheme=schemes[split_url.scheme]))
@@ -64,20 +57,94 @@ class JobRequest:
         ws_transport = WebsocketsTransport(url=ws_url)
         self.ws_client = Client(transport=ws_transport, schema=schema)
 
-        token = kwargs.pop("token", os.environ.get("MOTHR_ACCESS_TOKEN"))
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
-        if username is None:
-            username = os.environ.get("MOTHR_USERNAME")
-        if password is None:
-            password = os.environ.get("MOTHR_PASSWORD")
-        if token is not None:
-            self.headers = {"Authorization": f"Bearer {token}"}
-        elif None not in (username, password):
-            token, refresh = self.login(username, password)
-            os.environ["MOTHR_REFRESH_TOKEN"] = refresh
-            self.headers = {"Authorization": f"Bearer {token}"}
+        self.token = kwargs.pop("token", os.getenv(TOKEN_VAR))
+        username = kwargs.pop("username", os.getenv(USERNAME_VAR))
+        password = kwargs.pop("password", os.getenv(PASSWORD_VAR))
+        if self.token is not None:
+            self.headers = {"Authorization": f"Bearer {self.token}"}
+        elif all((username, password)):
+            self.token, self.refresh = self.login(username, password)
+            self.headers = {"Authorization": f"Bearer {self.token}"}
 
+    def login(
+        self, username: Optional[str] = None, password: Optional[str] = None
+    ) -> Tuple[str, str]:
+        """Retrieve a web token from mothr
+
+        Args:
+            username (str, optional): Username used to login, the library will look
+                for ``MOTHR_USERNAME`` in the environment as a fallback.
+            password (str, optional): Password used to login, the library will look
+                for ``MOTHR_PASSWORD`` in the environment as a fallback.
+
+        Returns:
+            str: An access token to pass with future requests
+            str: A refresh token for receiving a new access token
+                after the current token expires
+
+        Raises:
+            ValueError: If a username or password are not provided and are not found
+                in the current environment
+        """
+        username = username if username is not None else os.getenv("MOTHR_USERNAME")
+        password = password if password is not None else os.getenv("MOTHR_PASSWORD")
+        if username is None:
+            raise ValueError("Username not provided")
+        if password is None:
+            raise ValueError("Password not provided")
+
+        credentials = {"username": username, "password": password}
+        q = self.ds.Mutation.login.args(**credentials).select(
+            self.ds.LoginResponse.token, self.ds.LoginResponse.refresh
+        )
+        resp = self.ds.mutate(q)
+        tokens = resp["login"]
+        if tokens is None:
+            raise ValueError("Login failed")
+        access = tokens["token"]
+        refresh = tokens["refresh"]
+        return access, refresh
+
+    def refresh_token(self) -> str:
+        """Refresh an expired access token
+
+        Returns:
+            str: New access token
+        """
+        q = self.ds.Mutation.refresh.args(token=self.refresh).select(
+            self.ds.RefreshResponse.refresh
+        )
+        resp = self.ds.mutate(q)
+        if resp["refresh"] is None:
+            raise ValueError("Token refresh failed")
+        token = resp["refresh"]["token"]
+        self.token = token
+        self.headers["Authorization"] = f"Bearer {self.token}"
+        return token
+
+
+class JobRequest:
+    """Object used for submitting requests to mothr
+
+    Attributes:
+        job_id (str): Request job id returned from self.submit()
+        status (str): Status of the job
+
+    Args:
+        client (MOTHRClient): Client connection to MOTHR
+        service (str): Service being invoked by the request
+        parameters (list<dict>, optional): Parameters to pass to the service
+        broadcast (list<str>, optional): PubSub channel to broadcast the job result to
+        inputs (list<str>, optional): A list of S3 URIs to be used as
+            inputs by the service
+        outputs (list<str>, optional): A list of S3 URIs to be uploaded by the service
+        input_stream (str, optional): Value to pass to service through stdin
+        output_metadata (dict): Metadata attached to job outputs
+        version (str, optional): Version of the service, default `latest`
+    """
+
+    def __init__(self, **kwargs):
+        self.client = kwargs.pop("client", MothrClient())
         kwargs["parameters"] = kwargs.get("parameters", [])
         kwargs["outputMetadata"] = kwargs.get("output_metadata", {})
         self.req_args = kwargs
@@ -128,78 +195,6 @@ class JobRequest:
         self.req_args["outputMetadata"].update(metadata)
         return self
 
-    def login(
-        self, username: Optional[str] = None, password: Optional[str] = None
-    ) -> Tuple[str, Optional[str]]:
-        """Retrieve a web token from mothr
-
-        Args:
-            username (str, optional): Username used to login, the library will look
-                for ``MOTHR_USERNAME`` in the environment as a fallback.
-            password (str, optional): Password used to login, the library will look
-                for ``MOTHR_PASSWORD`` in the environment as a fallback.
-
-        Returns:
-            str: An access token to pass with future requests
-            str: A refresh token for receiving a new access token
-                after the current token expires
-
-        Raises:
-            ValueError: If a username or password are not provided and are not found
-                in the current environment
-        """
-        token = os.environ.get("MOTHR_ACCESS_TOKEN")
-        if token is not None:
-            return token, None
-
-        username = (
-            username if username is not None else os.environ.get("MOTHR_USERNAME")
-        )
-        password = (
-            password if password is not None else os.environ.get("MOTHR_PASSWORD")
-        )
-        if username is None:
-            raise ValueError("Username not provided")
-        if password is None:
-            raise ValueError("Password not provided")
-
-        credentials = {"username": username, "password": password}
-        q = self.ds.Mutation.login.args(**credentials).select(
-            self.ds.LoginResponse.token, self.ds.LoginResponse.refresh
-        )
-        resp = self.ds.mutate(q)
-        tokens = resp["login"]
-        if tokens is None:
-            raise ValueError("Login failed")
-        access = tokens["token"]
-        refresh = tokens["refresh"]
-        os.environ["MOTHR_ACCESS_TOKEN"] = access
-        os.environ["MOTHR_REFRESH_TOKEN"] = refresh
-        return access, refresh
-
-    def refresh_token(self) -> str:
-        """Refresh an expired access token
-
-        Returns:
-            str: New access token
-        """
-        current_token = self.headers["Authorization"].split(" ")[-1]
-        system_token = os.getenv("MOTHR_ACCESS_TOKEN", "")
-        if current_token != system_token:
-            token = system_token
-        else:
-            refresh = os.getenv("MOTHR_REFRESH_TOKEN")
-            q = self.ds.Mutation.refresh.args(token=refresh).select(
-                self.ds.RefreshResponse.refresh
-            )
-            resp = self.ds.mutate(q)
-            if resp["refresh"] is None:
-                raise ValueError("Token refresh failed")
-            token = resp["refresh"]["token"]
-            os.environ["MOTHR_ACCESS_TOKEN"] = token
-        self.headers["Authorization"] = f"Bearer {token}"
-        return token
-
     def submit(self) -> str:
         """Submit the job request
 
@@ -208,12 +203,12 @@ class JobRequest:
         """
         metadata = [{"key": k, "value": v} for k, v in self.req_args["outputMetadata"]]
         self.req_args["outputMetadata"] = metadata
-        q = self.ds.Mutation.submit_job.args(request=self.req_args).select(
-            self.ds.JobRequestResponse.job.select(
-                self.ds.Job.job_id, self.ds.Job.status
+        q = self.client.ds.Mutation.submit_job.args(request=self.req_args).select(
+            self.client.ds.JobRequestResponse.job.select(
+                self.client.ds.Job.job_id, self.client.ds.Job.status
             )
         )
-        resp = self.ds.mutate(q)
+        resp = self.client.ds.mutate(q)
         if "errors" in resp:
             raise ValueError("Error submitting job request: " + resp["errors"])
         job_id = resp["submitJob"]["job"]["jobId"]
@@ -236,9 +231,9 @@ class JobRequest:
         """
         if self.job_id is None:
             raise ValueError("Job ID is None, have you submitted the job?")
-        fields = [getattr(self.ds.Job, field) for field in fields]
-        q = self.ds.Query.job.args(jobId=self.job_id).select(*fields)
-        resp = self.ds.query(q)
+        fields = [getattr(self.client.ds.Job, field) for field in fields]
+        q = self.client.ds.Query.job.args(jobId=self.job_id).select(*fields)
+        resp = self.client.ds.query(q)
         return resp["job"]
 
     def check_status(self) -> str:
@@ -274,7 +269,7 @@ class JobRequest:
             }}
         """
         )
-        result = list(self.ws_client.subscribe(s))
+        result = list(self.client.ws_client.subscribe(s))
         return result[0]
 
     def subscribe_messages(self) -> Iterator[str]:
@@ -286,7 +281,7 @@ class JobRequest:
             }}
         """
         )
-        for result in self.ws_client.subscribe(s):
+        for result in self.client.ws_client.subscribe(s):
             yield result
 
     def run_job(
