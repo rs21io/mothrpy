@@ -1,6 +1,8 @@
 # mothrpy
 
 ![GitHub](https://img.shields.io/github/license/rs21io/mothrpy)
+![Actions](https://github.com/rs21io/mothrpy/workflows/tests/badge.svg)
+[![codecov](https://codecov.io/gh/rs21io/mothrpy/branch/main/graph/badge.svg)](https://codecov.io/gh/rs21io/mothrpy)
 
 ## Installation
 `pip install mothrpy`
