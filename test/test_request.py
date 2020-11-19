@@ -62,11 +62,11 @@ class TestJobRequest:
         assert len(messages) == 10
         assert messages[0] == "message 1"
 
-    def test_add_argument_chaining(self):
+    def test_method_chaining(self):
         request = JobRequest(service="test")
-        request.add_input(value="foo").add_output(value="bar").add_parameter(
-            value="baz"
-        ).add_output_metadata({"foo": "bar"})
+        request.add_input(value="s3://bucket/test.txt").add_output(
+            value="s3://bucket/test.txt"
+        ).add_parameter(value="baz").add_output_metadata({"foo": "bar"})
         assert len(request.req_args["parameters"]) == 3
         assert request.req_args["parameters"][0]["type"] == "input"
         assert request.req_args["parameters"][1]["type"] == "output"
@@ -82,3 +82,21 @@ class TestJobRequest:
         access, refresh = client.login(username="test", password="password")
         assert access == "access-token"
         assert refresh == "refresh-token"
+
+    def test_add_parameter_warn(self):
+        request = JobRequest(service="test")
+        request.job_id = "test"
+        with pytest.warns(UserWarning):
+            request.add_parameter(value="foo")
+
+    def test_add_input_warn(self):
+        request = JobRequest(service="test")
+        with pytest.warns(UserWarning):
+            request.add_input(value="foo")
+
+    def test_add_output_metadata_warn(self):
+        request = JobRequest(service="test")
+        request.job_id = "test"
+        with pytest.warns(UserWarning):
+            request.add_output_metadata({"foo": "bar"})
+
