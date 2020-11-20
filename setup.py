@@ -1,11 +1,16 @@
 import setuptools
 
+with open("README.md") as f:
+    long_description = f.read()
+
 setuptools.setup(
     name="mothrpy",
     version="0.1.0",
     author="James Arnold",
     author_email="james@rs21.io",
     description="Client library for interacting with MOTHR",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
     include_package_data=True,
     install_requires=["gql[requests,websockets]==3.0.0a4"],
