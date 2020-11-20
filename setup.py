@@ -5,7 +5,7 @@ with open("README.md") as f:
 
 setuptools.setup(
     name="mothrpy",
-    version="0.1.0",
+    version="0.2.0",
     author="James Arnold",
     author_email="james@rs21.io",
     description="Client library for interacting with MOTHR",
