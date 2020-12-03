@@ -2,4 +2,5 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-from .request import JobRequest, MothrClient
+from .client import MothrClient
+from .request import JobRequest

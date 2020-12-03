@@ -1,6 +1,6 @@
 import mock
 import pytest
-from mothrpy import JobRequest, MothrClient
+from mothrpy import JobRequest
 
 
 class TestJobRequest:
@@ -72,16 +72,6 @@ class TestJobRequest:
         assert request.req_args["parameters"][1]["type"] == "output"
         assert request.req_args["parameters"][2]["type"] == "parameter"
         assert request.req_args["outputMetadata"]["foo"] == "bar"
-
-    @mock.patch("gql.dsl.DSLSchema.mutate")
-    def test_login(self, mock_mutate):
-        mock_mutate.return_value = {
-            "login": {"token": "access-token", "refresh": "refresh-token"}
-        }
-        client = MothrClient()
-        access, refresh = client.login(username="test", password="password")
-        assert access == "access-token"
-        assert refresh == "refresh-token"
 
     def test_add_parameter_warn(self):
         request = JobRequest(service="test")
