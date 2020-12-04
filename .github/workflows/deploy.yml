@@ -1,13 +1,12 @@
 name: deploy
 
 on:
-  push:
-    tags:
-      - v*
+  release:
+    types: [created]
 
 jobs:
   deploy:
-    runs-on: unbuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 3.7
