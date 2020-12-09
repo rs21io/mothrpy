@@ -49,14 +49,16 @@ class TestJobRequest:
 
     @mock.patch("gql.Client.subscribe")
     def test_subscribe(self, mock_subscribe):
-        mock_subscribe.return_value = ["test"]
+        mock_subscribe.return_value = [{"subscribeJobComplete": {"jobId": "test"}}]
         request = JobRequest(service="test")
         result = request.subscribe()
-        assert result == "test"
+        assert result["jobId"] == "test"
 
     @mock.patch("gql.Client.subscribe")
     def test_subscribe_messages(self, mock_subscribe):
-        mock_subscribe.return_value = [f"message {i+1}" for i in range(10)]
+        mock_subscribe.return_value = [
+            {"subscribeJobMessages": f"message {i+1}"} for i in range(10)
+        ]
         request = JobRequest(service="test")
         messages = [m for m in request.subscribe_messages()]
         assert len(messages) == 10
@@ -89,4 +91,3 @@ class TestJobRequest:
         request.job_id = "test"
         with pytest.warns(UserWarning):
             request.add_output_metadata({"foo": "bar"})
-

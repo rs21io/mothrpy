@@ -152,7 +152,7 @@ class JobRequest:
         job = self.query_job(fields=["jobId", "service", "status", "result", "error"])
         return job
 
-    def subscribe(self) -> str:
+    def subscribe(self) -> Dict:
         """Subscribe to the job's complete event"""
         s = gql(
             f"""
@@ -168,7 +168,7 @@ class JobRequest:
         """
         )
         result = list(self.client.ws_client.subscribe(s))
-        return result[0]
+        return result[0]["subscribeJobComplete"]
 
     def subscribe_messages(self) -> Iterator[str]:
         """Subscribe to intermediate messages published by the job"""
@@ -180,7 +180,7 @@ class JobRequest:
         """
         )
         for result in self.client.ws_client.subscribe(s):
-            yield result
+            yield result["subscribeJobMessages"]
 
     def run_job(
         self, poll_frequency: float = 0.25, return_failed: bool = False
